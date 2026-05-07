@@ -1,19 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import StockChart, { ChartPoint } from "./StockChart";
+import StockChart, { ChartPoint } from "../stocks/StockChart";
 
-const POPULAR = [
-  "PTT",
-  "CPALL",
-  "AOT",
-  "KBANK",
-  "SCB",
-  "ADVANC",
-  "DELTA",
-  "BDMS",
-  "GULF",
-  "BBL",
+const PRESETS: { label: string; symbol: string; desc: string }[] = [
+  { label: "Gold Futures", symbol: "GC=F", desc: "ทองคำล่วงหน้า (COMEX)" },
+  { label: "Spot XAU/USD", symbol: "XAUUSD=X", desc: "ราคาทอง Spot" },
+  { label: "GLD ETF", symbol: "GLD", desc: "SPDR Gold Trust ETF" },
+  { label: "IAU ETF", symbol: "IAU", desc: "iShares Gold Trust" },
+  { label: "USD/THB", symbol: "THB=X", desc: "อัตราแลกเปลี่ยน" },
 ];
 
 const METHOD_LABELS: Record<string, string> = {
@@ -39,16 +34,21 @@ type ApiResponse = {
   error?: string;
 };
 
-export default function StocksPage() {
-  const [ticker, setTicker] = useState("PTT");
+// 1 baht-weight Thai gold = 15.244 g of 96.5% pure
+// Pure ounces in 1 baht-weight = 15.244 * 0.965 / 31.1035
+const BAHT_WEIGHT_OZ = (15.244 * 0.965) / 31.1035;
+
+export default function GoldPage() {
+  const [ticker, setTicker] = useState("GC=F");
   const [days, setDays] = useState("30");
-  const [targetPct, setTargetPct] = useState("5");
+  const [targetPct, setTargetPct] = useState("3");
   const [yearsBack, setYearsBack] = useState("3");
   const [methods, setMethods] = useState<string[]>([
     "historical",
     "montecarlo",
     "lognormal",
   ]);
+  const [usdThb, setUsdThb] = useState("36");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -89,28 +89,34 @@ export default function StocksPage() {
     }
   }
 
+  // ราคาทองไทย 1 บาท = USD spot/oz × 0.473 × USD/THB
+  const thaiGoldPerBaht =
+    data && /XAUUSD|GC=F/i.test(data.symbol)
+      ? data.lastPrice * BAHT_WEIGHT_OZ * Number(usdThb)
+      : null;
+
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-800">
+    <main className="min-h-screen bg-amber-50 px-4 py-8 text-slate-800">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">
-              คำนวณความน่าจะเป็นของหุ้นไทย
+              คำนวณความน่าจะเป็นของทองคำ
             </h1>
             <p className="mt-1 text-slate-600">
-              วิเคราะห์โอกาสที่ราคาหุ้นจะถึงเป้าหมาย พร้อมสัญญาณเทคนิค
+              วิเคราะห์โอกาสที่ราคาทองจะถึงเป้าหมาย พร้อมสัญญาณเทคนิค
             </p>
           </div>
           <nav className="flex gap-2 text-sm">
             <a
               href="/stocks"
-              className="rounded-md border border-sky-400 bg-sky-100 px-3 py-1.5 font-medium text-sky-800"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
             >
               หุ้นไทย
             </a>
             <a
               href="/gold"
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+              className="rounded-md border border-amber-400 bg-amber-100 px-3 py-1.5 font-medium text-amber-800"
             >
               ทองคำ
             </a>
@@ -119,19 +125,19 @@ export default function StocksPage() {
 
         <form
           onSubmit={onSubmit}
-          className="mb-8 rounded-xl bg-white p-6 shadow ring-1 ring-slate-200"
+          className="mb-8 rounded-xl bg-white p-6 shadow ring-1 ring-amber-200"
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
+            <div className="lg:col-span-2">
               <label className="mb-1 block text-sm font-medium text-slate-700">
-                Ticker (จะเติม .BK ให้)
+                Symbol
               </label>
               <input
                 type="text"
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                placeholder="เช่น PTT"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                placeholder="เช่น GC=F"
               />
             </div>
             <div>
@@ -144,7 +150,7 @@ export default function StocksPage() {
                 max={3650}
                 value={days}
                 onChange={(e) => setDays(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
             </div>
             <div>
@@ -156,7 +162,7 @@ export default function StocksPage() {
                 step="0.1"
                 value={targetPct}
                 onChange={(e) => setTargetPct(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
             </div>
             <div>
@@ -169,24 +175,37 @@ export default function StocksPage() {
                 max={10}
                 value={yearsBack}
                 onChange={(e) => setYearsBack(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                USD/THB (สำหรับแปลงราคาทองไทย)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={usdThb}
+                onChange={(e) => setUsdThb(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
             </div>
           </div>
 
           <div className="mt-4">
             <div className="mb-2 text-sm font-medium text-slate-700">
-              หุ้นยอดนิยม
+              สัญลักษณ์ที่ใช้บ่อย
             </div>
             <div className="flex flex-wrap gap-2">
-              {POPULAR.map((s) => (
+              {PRESETS.map((p) => (
                 <button
-                  key={s}
+                  key={p.symbol}
                   type="button"
-                  onClick={() => setTicker(s)}
-                  className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm text-sky-700 hover:bg-sky-100"
+                  onClick={() => setTicker(p.symbol)}
+                  title={p.desc}
+                  className="rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-sm text-amber-800 hover:bg-amber-200"
                 >
-                  {s}
+                  {p.label} ({p.symbol})
                 </button>
               ))}
             </div>
@@ -206,7 +225,7 @@ export default function StocksPage() {
                     type="checkbox"
                     checked={methods.includes(k)}
                     onChange={() => toggleMethod(k)}
-                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                   />
                   {label}
                 </label>
@@ -218,7 +237,7 @@ export default function StocksPage() {
             <button
               type="submit"
               disabled={loading || methods.length === 0}
-              className="rounded-md bg-sky-600 px-6 py-2 font-medium text-white shadow hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-amber-600 px-6 py-2 font-medium text-white shadow hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "กำลังคำนวณ..." : "คำนวณ"}
             </button>
@@ -233,23 +252,37 @@ export default function StocksPage() {
 
         {data && (
           <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow ring-1 ring-slate-200">
+            <div className="rounded-xl bg-white p-6 shadow ring-1 ring-amber-200">
               <div className="flex flex-wrap items-baseline gap-4">
                 <div className="text-2xl font-bold text-slate-900">
                   {data.symbol}
                 </div>
                 <div className="text-lg text-slate-600">
-                  ราคาล่าสุด {data.lastPrice.toFixed(2)} บาท
+                  ราคาล่าสุด {data.lastPrice.toFixed(2)}
                 </div>
                 <div className="text-sm text-slate-500">{data.lastDate}</div>
               </div>
+              {thaiGoldPerBaht != null && (
+                <div className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+                  ประมาณการราคาทองไทย 96.5% (น้ำหนักบาท): ~
+                  <span className="font-bold">
+                    {thaiGoldPerBaht.toLocaleString("th-TH", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </span>{" "}
+                  บาท/บาททอง
+                  <span className="ml-2 text-xs text-amber-700">
+                    (จาก spot × 0.473 oz × USD/THB {usdThb})
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               {Object.entries(data.probabilities).map(([k, v]) => (
                 <div
                   key={k}
-                  className="rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 p-6 text-white shadow"
+                  className="rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-6 text-white shadow"
                 >
                   <div className="text-sm uppercase tracking-wide opacity-90">
                     {METHOD_LABELS[k]}
@@ -264,12 +297,15 @@ export default function StocksPage() {
               ))}
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow ring-1 ring-slate-200">
+            <div className="rounded-xl bg-white p-6 shadow ring-1 ring-amber-200">
               <h2 className="mb-3 text-lg font-semibold text-slate-800">
                 สัญญาณเทคนิค
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <SignalCard label="แนวโน้ม (SMA50 vs 200)" value={data.signals.trend} />
+                <SignalCard
+                  label="แนวโน้ม (SMA50 vs 200)"
+                  value={data.signals.trend}
+                />
                 <SignalCard
                   label="RSI(14)"
                   value={`${data.signals.rsi}${
@@ -287,9 +323,10 @@ export default function StocksPage() {
           </div>
         )}
 
-        <div className="mt-10 rounded-md bg-amber-50 p-4 text-sm text-amber-800 ring-1 ring-amber-200">
+        <div className="mt-10 rounded-md bg-amber-100 p-4 text-sm text-amber-900 ring-1 ring-amber-300">
           ⚠️ คำเตือน: ข้อมูลและการคำนวณบนเว็บนี้เป็นการวิเคราะห์เชิงสถิติจากข้อมูลย้อนหลัง
-          ไม่ใช่คำแนะนำการลงทุน การลงทุนมีความเสี่ยง ผู้ลงทุนควรศึกษาข้อมูลและตัดสินใจด้วยตนเอง
+          ไม่ใช่คำแนะนำการลงทุน ราคาทองไทยที่แสดงเป็นการประมาณการจาก spot
+          ไม่รวมส่วนต่าง/ค่ากำเหน็จของร้านทอง
         </div>
       </div>
     </main>
@@ -298,7 +335,7 @@ export default function StocksPage() {
 
 function SignalCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-200">
+    <div className="rounded-lg bg-amber-50 p-4 ring-1 ring-amber-200">
       <div className="text-xs text-slate-500">{label}</div>
       <div className="mt-1 text-lg font-semibold text-slate-800">{value}</div>
     </div>

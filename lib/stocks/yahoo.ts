@@ -26,8 +26,8 @@ export type DailyBar = {
 export function normalizeTicker(input: string): string {
   const t = input.trim().toUpperCase();
   if (!t) return t;
-  if (t.includes(".")) return t;
-  return `${t}.BK`;
+  if (/^[A-Z]+$/.test(t)) return `${t}.BK`;
+  return t;
 }
 
 export async function fetchHistorical(
