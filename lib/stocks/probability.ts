@@ -47,12 +47,13 @@ export function historicalFrequency({
 }: ProbabilityInput): number {
   if (closes.length <= days) return 0;
   const target = targetPct / 100;
+  const lowerTail = targetPct < 0;
   let total = 0;
   let hit = 0;
   for (let i = 0; i + days < closes.length; i++) {
     const r = closes[i + days] / closes[i] - 1;
     total++;
-    if (r >= target) hit++;
+    if (lowerTail ? r <= target : r >= target) hit++;
   }
   return total > 0 ? hit / total : 0;
 }
@@ -75,13 +76,14 @@ export function monteCarlo({
   const { mean, std } = meanStd(lr);
   const trials = 10000;
   const target = Math.log(1 + targetPct / 100);
+  const lowerTail = targetPct < 0;
   let hit = 0;
   for (let t = 0; t < trials; t++) {
     let cum = 0;
     for (let d = 0; d < days; d++) {
       cum += mean + std * boxMuller();
     }
-    if (cum >= target) hit++;
+    if (lowerTail ? cum <= target : cum >= target) hit++;
   }
   return hit / trials;
 }
@@ -97,7 +99,9 @@ export function logNormalProbability({
   const target = Math.log(1 + targetPct / 100);
   const mu = mean * days;
   const sigma = std * Math.sqrt(days);
-  if (sigma === 0) return mu >= target ? 1 : 0;
-  // P(X >= target) = 1 - Phi((target - mu)/sigma)
-  return 1 - normCdf((target - mu) / sigma);
+  const lowerTail = targetPct < 0;
+  if (sigma === 0)
+    return (lowerTail ? mu <= target : mu >= target) ? 1 : 0;
+  const z = (target - mu) / sigma;
+  return lowerTail ? normCdf(z) : 1 - normCdf(z);
 }

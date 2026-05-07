@@ -155,7 +155,7 @@ export default function GoldPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">
-                เป้าหมาย %
+                เป้าหมาย % (ลบ = โอกาสร่วงถึง/เกินค่านี้)
               </label>
               <input
                 type="number"
@@ -291,7 +291,8 @@ export default function GoldPage() {
                     {(v * 100).toFixed(2)}%
                   </div>
                   <div className="mt-2 text-sm opacity-90">
-                    โอกาสที่ราคาจะ ≥ {targetPct}% ใน {days} วัน
+                    โอกาสที่ผลตอบแทน{Number(targetPct) < 0 ? " ≤ " : " ≥ "}
+                    {targetPct}% ใน {days} วัน
                   </div>
                 </div>
               ))}
