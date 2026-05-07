@@ -104,7 +104,8 @@ export async function POST(req: NextRequest) {
       chart,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "เกิดข้อผิดพลาด";
+    console.error("probability API error:", e);
+    const msg = e instanceof Error ? `${e.name}: ${e.message}` : "เกิดข้อผิดพลาด";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
